@@ -33,20 +33,27 @@ export class MobaFetchUserConsumer {
       CIUserEntity,
     );
 
-    const ciUsers = await ciUserRepo.find({
-      // select: ['id', 'fullname', 'email', 'birthday'],
-      relations: { checkin_events: { category: true } },
-    });
-
-    const total = ciUsers.length;
     const batchSize = 50;
+    let offset = 0;
+    const total = await ciUserRepo.count();
+    let hasMore = true;
 
-    for (let i = 0; i < total; i += batchSize) {
-      const batch = ciUsers.slice(i, i + batchSize);
-      const current = Math.min(i + batch.length, total);
-      const percent = Math.round((current / total) * 100);
+    while (hasMore) {
+      const batch = await ciUserRepo.find({
+        // select: ['id', 'fullname', 'email', 'birthday'],
+        relations: { checkin_events: { category: true } },
+        skip: offset,
+        take: batchSize,
+      });
+
+      if (batch.length === 0) {
+        hasMore = false;
+        break;
+      }
+      const percent = Math.round(((offset + batch.length) / total) * 100);
       this.mobaGateway.sendDataToDevice(device_id, batch, percent);
       await job.progress(percent);
+      offset += batchSize;
       await new Promise((res) => setTimeout(res, 50));
     }
 

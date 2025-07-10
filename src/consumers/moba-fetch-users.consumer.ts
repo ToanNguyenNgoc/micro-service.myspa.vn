@@ -17,33 +17,54 @@ export class MobaFetchUserConsumer {
     private readonly tenantDb: TenantDatabaseService,
     @InjectRepository(OrganizationEntity)
     private readonly orgRepo: Repository<OrganizationEntity>,
-    private readonly mobaGateway:MobaGateway
+    private readonly mobaGateway: MobaGateway
   ) { }
   @Process()
-  async handler(job: Job<{ org_id: any, device_id:string }>) {
+  async handler(job: Job<{ org_id: any; device_id: string }>) {
     const { org_id, device_id } = job.data;
+
     const org = await this.orgRepo.findOne({
       where: [{ id: org_id }, { subdomain: org_id }],
     });
     if (!org) return;
-    const ciUserRepo = await this.tenantDb.onOrgRepo(org.subdomain, CIUserEntity);
+
+    const ciUserRepo = await this.tenantDb.onOrgRepo(
+      org.subdomain,
+      CIUserEntity,
+    );
+
     const ciUsers = await ciUserRepo.find({
-      select: ['id', 'fullname', 'email', 'birthday'],
-      relations: { checkin_events: { category: true } }
+      // select: ['id', 'fullname', 'email', 'birthday'],
+      relations: { checkin_events: { category: true } },
     });
-    // const ciUsers = await ciUserRepo
-    //   .createQueryBuilder('df_user')
-    //   .select([
-    //     'df_user.id',
-    //     'df_user.fullname',
-    //     'df_user.email',
-    //     'df_user.birthday',
-    //   ])
-    //   .innerJoinAndSelect('df_user.checkin_events', 'checkin_event')
-    //   .leftJoinAndSelect('checkin_event.category', 'category')
-    //   .getMany();
-    // console.log(JSON.stringify(ciUsers));
-    this.mobaGateway.sendDataToDevice(device_id, ciUsers);
-    return ciUsers;
+
+    const total = ciUsers.length;
+    const batchSize = 50;
+
+    for (let i = 0; i < total; i += batchSize) {
+      const batch = ciUsers.slice(i, i + batchSize);
+      const current = Math.min(i + batch.length, total);
+      const percent = Math.round((current / total) * 100);
+      this.mobaGateway.sendDataToDevice(device_id, batch, percent);
+      await job.progress(percent);
+      await new Promise((res) => setTimeout(res, 50));
+    }
+
+    return { total };
   }
 }
+
+
+
+// const ciUsers = await ciUserRepo
+//   .createQueryBuilder('df_user')
+//   .select([
+//     'df_user.id',
+//     'df_user.fullname',
+//     'df_user.email',
+//     'df_user.birthday',
+//   ])
+//   .innerJoinAndSelect('df_user.checkin_events', 'checkin_event')
+//   .leftJoinAndSelect('checkin_event.category', 'category')
+//   .getMany();
+// console.log(JSON.stringify(ciUsers));

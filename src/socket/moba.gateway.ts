@@ -18,10 +18,10 @@ export class MobaGateway extends BaseGateway {
     return client.join(room);
   }
 
-  async sendDataToDevice<T>(deviceId: string, data: T) {
+  async sendDataToDevice<T>(deviceId: string, data: T, percent: number) {
     const room = `${WS_EVENT_NAME.moba_fetch_users}.${deviceId}`;
     this.logger.log(`Client send data to room: `, room);
-    return this.server.to(room).emit(room, { success: true, data });
+    return this.server.to(room).emit(room, { success: true, data, percent });
   }
   //
 }

@@ -8,12 +8,14 @@ import { SharedModule } from './shared/shared.module';
 import { ApiModule } from './api/api.module';
 import { BullModule } from '@nestjs/bull';
 import { SocketModule } from './socket/socket.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync(typeOrmAsyncConfig),
     BullModule.forRoot(bullConfig),
+    ScheduleModule.forRoot(),
     SharedModule,
     SocketModule,
     ApiModule,

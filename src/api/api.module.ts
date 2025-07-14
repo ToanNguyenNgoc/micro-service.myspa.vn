@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MobaModule } from './moba/moba.module';
+import { BeautyxModule } from './beautyx/beautyx.module';
 
 @Module({
-  imports: [MobaModule],
+  imports: [BeautyxModule, MobaModule],
 })
 export class ApiModule {}
